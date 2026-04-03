@@ -32,17 +32,17 @@ TOP AVAILABLE (FantasyPros ECR, standard scoring):
 {top_available}
 
 Recommend the single best pick right now. Consider:
-1. Best player available (BPA) vs. positional need
+1. Positional scarcity — in standard scoring, elite RBs are the hardest to replace; don't leave pick 1-4 rounds without one
 2. ADP value — is anyone falling past their value?
-3. Standard scoring fit (workhorse RBs, TD-upside WRs/TEs)
-4. Bye week stacking with current roster
+3. Standard scoring fit (workhorse RBs > committee backs; TD-upside WRs/TEs > reception merchants)
+4. Roster construction — don't stack the same position twice early unless the value gap is massive
 5. Injury flags
 
 FORMAT YOUR RESPONSE:
 PICK: [Name] | [Position] | [Team]
 CONFIDENCE: [High / Medium / Low]
 REASON: [2–3 sentences max]
-ALTERNATIVE: [Name if first choice is gone]"""
+ALTERNATIVE: [Name] | [Position] | [Team] — must be a DIFFERENT position than your main pick (e.g. if you recommend a WR, the alternative is the best RB, and vice versa)"""
 
 
 START_SIT_PROMPT = """WEEK {week} START/SIT — STANDARD SCORING
