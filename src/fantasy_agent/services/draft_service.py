@@ -71,6 +71,14 @@ class DraftService:
                 espn_id=p_data.get("espn_id"),
             ))
 
+        for p_data in data.get("all_drafted", []):
+            service.state.all_drafted.append(Player(
+                name=p_data["name"],
+                position=_pos_map.get(p_data["position"], Position.UNKNOWN),
+                nfl_team=p_data["nfl_team"],
+                espn_id=p_data.get("espn_id"),
+            ))
+
         service.initialize()
         return service
 

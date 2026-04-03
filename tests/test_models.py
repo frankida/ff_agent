@@ -129,14 +129,13 @@ class TestDraftState:
         assert state.is_my_pick() is False
 
     def test_is_my_pick_even_round_snake(self):
-        # advance() uses a DESCENDING counter in even rounds (N→1),
-        # so pick_in_round still equals pick_position when it's the user's turn.
-        # pick_position=3 in round 2: counter descends 10→9→8→7→6→5→4→3 (our turn)
+        # In even rounds the snake mirrors: slot = total_teams - pick_position + 1
+        # pick_position=3, total_teams=10 → even-round slot = 10-3+1 = 8
         state = self._state(pick_position=3, total_teams=10)
         state.current_round = 2
-        state.pick_in_round = 3   # descending counter reaches pick_position
+        state.pick_in_round = 8   # mirrored slot
         assert state.is_my_pick() is True
-        state.pick_in_round = 4
+        state.pick_in_round = 3   # wrong — that's the odd-round slot
         assert state.is_my_pick() is False
 
     def test_advance_moves_pick(self):
@@ -211,6 +210,95 @@ class TestDraftState:
         assert d["overall_pick"] == 27
         assert len(d["my_players"]) == 1
         assert "123" in d["drafted_ids"]
+
+    # ── New tests for snake-draft is_my_pick (12-team, pick 5) ───────────
+
+    def test_is_my_pick_rounds_1_through_4_snake_12_team(self):
+        """Pick position 5 in a 12-team snake draft across rounds 1-4."""
+        state = DraftState(pick_position=5, total_teams=12, pick_in_round=1)
+
+        # Round 1 (odd, ascending): slot = 5
+        state.current_round = 1
+        state.pick_in_round = 5
+        assert state.is_my_pick() is True
+        state.pick_in_round = 8
+        assert state.is_my_pick() is False
+
+        # Round 2 (even, descending): slot = 12-5+1 = 8
+        state.current_round = 2
+        state.pick_in_round = 8
+        assert state.is_my_pick() is True
+        state.pick_in_round = 5
+        assert state.is_my_pick() is False
+
+        # Round 3 (odd, ascending): slot = 5
+        state.current_round = 3
+        state.pick_in_round = 5
+        assert state.is_my_pick() is True
+
+        # Round 4 (even, descending): slot = 8
+        state.current_round = 4
+        state.pick_in_round = 8
+        assert state.is_my_pick() is True
+        state.pick_in_round = 5
+        assert state.is_my_pick() is False
+
+    # ── advance() through a full snake sequence (2 rounds of 12) ─────────
+
+    def test_advance_full_snake_24_picks(self):
+        """Advance through 24 picks (2 full rounds of 12 teams)."""
+        state = DraftState(
+            pick_position=5, total_teams=12, total_rounds=2, pick_in_round=1,
+        )
+
+        picks_in_round = []
+        rounds = []
+
+        for i in range(24):
+            picks_in_round.append(state.pick_in_round)
+            rounds.append(state.current_round)
+            state.advance()
+
+        # Round 1 should ascend 1..12
+        assert picks_in_round[:12] == list(range(1, 13))
+        assert all(r == 1 for r in rounds[:12])
+
+        # Round 2 should descend 12..1
+        assert picks_in_round[12:] == list(range(12, 0, -1))
+        assert all(r == 2 for r in rounds[12:])
+
+        # After 24 advances we should be at round 3 (complete)
+        assert state.current_round == 3
+        assert state.is_complete() is True
+
+    # ── to_dict / JSON roundtrip preserves all_drafted ───────────────────
+
+    def test_to_dict_json_roundtrip_all_drafted(self):
+        """Serialize to dict, convert to JSON, rebuild and verify all_drafted."""
+        import json
+        state = DraftState(pick_position=5, total_teams=12, pick_in_round=1)
+        state.all_drafted = [
+            Player("Alpha", Position.RB, "SF", espn_id="aaa"),
+            Player("Bravo", Position.WR, "KC", espn_id="bbb"),
+            Player("Charlie", Position.QB, "BUF"),
+        ]
+        state.my_players = [state.all_drafted[0]]
+        state.drafted_ids = {"aaa", "bbb"}
+
+        d = state.to_dict()
+        blob = json.dumps(d)
+        restored = json.loads(blob)
+
+        # all_drafted must be present and correct length
+        assert "all_drafted" in restored
+        assert len(restored["all_drafted"]) == 3
+
+        names = [p["name"] for p in restored["all_drafted"]]
+        assert names == ["Alpha", "Bravo", "Charlie"]
+
+        # Verify espn_id preserved (including None mapped to null/None)
+        assert restored["all_drafted"][0]["espn_id"] == "aaa"
+        assert restored["all_drafted"][2]["espn_id"] is None
 
 
 # ── LeagueSettings ────────────────────────────────────────────────────────────
