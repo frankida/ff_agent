@@ -23,11 +23,14 @@ class DraftState:
         """
         True when the current overall pick belongs to the user.
 
-        advance() uses an ascending counter in odd rounds (1→N) and a
-        descending counter in even rounds (N→1), so pick_in_round always
-        equals pick_position when it's the user's turn regardless of direction.
+        In a snake draft, odd rounds ascend (1→N) and even rounds descend
+        (N→1).  In odd rounds the user's slot is simply pick_position; in
+        even rounds it mirrors to (total_teams - pick_position + 1).
         """
-        return self.pick_in_round == self.pick_position
+        if self.current_round % 2 == 1:
+            return self.pick_in_round == self.pick_position
+        else:
+            return self.pick_in_round == (self.total_teams - self.pick_position + 1)
 
     def advance(self):
         """Move counters forward one pick."""
@@ -80,4 +83,9 @@ class DraftState:
                 for p in self.my_players
             ],
             "drafted_ids": list(self.drafted_ids),
+            "all_drafted": [
+                {"name": p.name, "position": p.position.value,
+                 "nfl_team": p.nfl_team, "espn_id": p.espn_id}
+                for p in self.all_drafted
+            ],
         }

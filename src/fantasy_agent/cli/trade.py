@@ -7,17 +7,16 @@ console = Console()
 
 def _build_services(platform: str):
     import os
-    from pathlib import Path
     import yaml
-    from dotenv import load_dotenv
     from ..connectors.sleeper import SleeperConnector
     from ..connectors.fantasypros import FantasyProsConnector
     from ..services.data_aggregator import DataAggregator
     from ..models.league import LeagueSettings
     from ..ai.client import FantasyAIClient
+    from .utils import load_env, get_config_dir
 
-    config_dir = Path(__file__).parents[4] / "config"
-    load_dotenv(config_dir / ".env")
+    load_env()
+    config_dir = get_config_dir()
 
     with open(config_dir / "leagues.yaml") as f:
         cfg = yaml.safe_load(f)
