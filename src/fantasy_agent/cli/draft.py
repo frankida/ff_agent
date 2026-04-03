@@ -9,16 +9,14 @@ console = Console()
 def _make_services(platform: str = "espn"):
     """Build connector + aggregator + AI client from env/config."""
     import os
-    from pathlib import Path
-    from dotenv import load_dotenv
     from ..connectors.espn import ESPNConnector
     from ..connectors.sleeper import SleeperConnector
     from ..connectors.fantasypros import FantasyProsConnector
     from ..services.data_aggregator import DataAggregator
     from ..ai.client import FantasyAIClient
+    from .utils import load_env
 
-    config_dir = Path(__file__).parents[4] / "config"
-    load_dotenv(config_dir / ".env")
+    load_env()
 
     sleeper = SleeperConnector()
     fps = FantasyProsConnector()
@@ -117,15 +115,13 @@ def draft_start(
 def _make_aggregator_only():
     """Build aggregator + AI without a league connector (for mock mode)."""
     import os
-    from pathlib import Path
-    from dotenv import load_dotenv
     from ..connectors.sleeper import SleeperConnector
     from ..connectors.fantasypros import FantasyProsConnector
     from ..services.data_aggregator import DataAggregator
     from ..ai.client import FantasyAIClient
+    from .utils import load_env
 
-    config_dir = Path(__file__).parents[4] / "config"
-    load_dotenv(config_dir / ".env")
+    load_env()
 
     aggregator = DataAggregator(
         espn=None, yahoo=None,
@@ -382,11 +378,11 @@ def draft_analyze(
         fantasy draft analyze "Derrick Henry"
     """
     from ..services.trade_service import TradeService
+    from .utils import get_config_dir
     import yaml
-    from pathlib import Path
 
     _, aggregator, ai = _make_aggregator_only()
-    config_dir = Path(__file__).parents[4] / "config"
+    config_dir = get_config_dir()
     with open(config_dir / "leagues.yaml") as f:
         cfg = yaml.safe_load(f)
     from ..models.league import LeagueSettings

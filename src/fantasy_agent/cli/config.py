@@ -1,17 +1,26 @@
 import os
-from pathlib import Path
 import typer
 import yaml
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
+from .utils import load_env, get_config_dir
+
 app = typer.Typer(help="Configuration and setup commands")
 console = Console()
 
-CONFIG_DIR = Path(__file__).parents[4] / "config"
-ENV_PATH = CONFIG_DIR / ".env"
-YAML_PATH = CONFIG_DIR / "leagues.yaml"
+
+def _config_dir():
+    return get_config_dir()
+
+
+def _env_path():
+    return _config_dir() / ".env"
+
+
+def _yaml_path():
+    return _config_dir() / "leagues.yaml"
 
 
 @app.command("setup")
@@ -58,7 +67,10 @@ def setup():
     anthropic_key = typer.prompt("Anthropic API Key")
 
     # ── Write .env ──────────────────────────────────────────────────────────
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    cfg_dir = _config_dir()
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    env_path = _env_path()
+    yaml_path = _yaml_path()
     env_content = f"""# ESPN
 ESPN_SWID={espn_swid}
 ESPN_S2={espn_s2}
@@ -77,12 +89,12 @@ ANTHROPIC_API_KEY={anthropic_key}
 # FantasyPros (optional)
 FANTASYPROS_API_KEY=
 """
-    ENV_PATH.write_text(env_content)
-    console.print(f"\n[green]✓[/] Config written to {ENV_PATH}")
+    env_path.write_text(env_content)
+    console.print(f"\n[green]✓[/] Config written to {env_path}")
 
     # Update leagues.yaml with league/team IDs
-    if YAML_PATH.exists():
-        with open(YAML_PATH) as f:
+    if yaml_path.exists():
+        with open(yaml_path) as f:
             league_config = yaml.safe_load(f)
     else:
         league_config = {"espn": {}, "yahoo": {}}
@@ -93,9 +105,9 @@ FANTASYPROS_API_KEY=
         league_config["yahoo"]["league_id"] = yahoo_league_id
         league_config["yahoo"]["team_key"] = yahoo_team_key
 
-    with open(YAML_PATH, "w") as f:
+    with open(yaml_path, "w") as f:
         yaml.dump(league_config, f, default_flow_style=False)
-    console.print(f"[green]✓[/] League config written to {YAML_PATH}")
+    console.print(f"[green]✓[/] League config written to {yaml_path}")
 
     console.print(
         "\n[bold green]Setup complete![/] Run [bold]fantasy config verify[/] to test connections."
@@ -109,9 +121,8 @@ def verify():
     from ..connectors.sleeper import SleeperConnector
     from ..connectors.fantasypros import FantasyProsConnector
     from ..ai.client import FantasyAIClient
-    from dotenv import load_dotenv
 
-    load_dotenv(ENV_PATH)
+    load_env()
 
     checks = []
 
@@ -185,8 +196,7 @@ def verify():
 @app.command("show")
 def show():
     """Print current configuration (secrets redacted)."""
-    from dotenv import load_dotenv
-    load_dotenv(ENV_PATH)
+    load_env()
 
     console.print("\n[bold]Current Configuration:[/]")
     keys_to_show = [
