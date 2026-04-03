@@ -9,6 +9,8 @@ An AI-powered fantasy football assistant built on Claude. Gives you real-time dr
 - **Waiver Wire** — Spots trending adds before the buzz hits mainstream. Explains why a player has value in standard (not just PPR noise).
 - **Trade analysis** — Accept / Reject / Counter with concrete reasoning.
 
+<img width="1307" height="553" alt="image" src="https://github.com/user-attachments/assets/46f35422-bf13-49be-b1cc-e053aaa37a5d" />
+
 ## Scoring
 
 Optimized for **Standard Scoring** (no PPR). Workhorse RBs, red zone usage, and TD upside are weighted accordingly.
