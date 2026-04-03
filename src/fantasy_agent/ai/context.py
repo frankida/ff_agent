@@ -3,6 +3,47 @@ from ..models.roster import Roster
 from ..models.draft import DraftState
 
 
+def build_draft_briefing(
+    total_teams: int,
+    pick_position: int,
+    scoring: str,
+    top_available: list[Player],
+    top_n: int = 30,
+) -> str:
+    """
+    Initial briefing sent to Claude at the start of a draft.
+    Sets context for the entire multi-turn conversation.
+    """
+    scoring_label = {"std": "Standard (no PPR)", "ppr": "Full PPR", "half-ppr": "Half PPR"}.get(
+        scoring, scoring
+    )
+    lines = [
+        f"You are my fantasy football draft assistant. Here's the setup:",
+        f"- {total_teams}-team league, {scoring_label} scoring",
+        f"- I have pick #{pick_position} (snake draft)",
+        f"",
+        f"Give concise, opinionated recommendations. Prioritize: positional value,",
+        f"ADP value gaps, roster construction (don't stack positions early), injury flags.",
+        f"",
+        f"Top {min(top_n, len(top_available))} available players at draft start:",
+    ]
+    for i, p in enumerate(top_available[:top_n], 1):
+        lines.append(f"  {i:2}. {p.to_llm_summary()}")
+    lines.append("")
+    lines.append("Ready to start. I'll tell you my picks and opponent picks as we go.")
+    return "\n".join(lines)
+
+
+def build_opponent_picks_summary(picks: list[Player]) -> str:
+    """Terse batched update for opponent picks — injects without burning tokens."""
+    if not picks:
+        return "No new opponent picks."
+    lines = ["Opponents picked:"]
+    for p in picks:
+        lines.append(f"  - {p.name} ({p.position.value}, {p.nfl_team})")
+    return "\n".join(lines)
+
+
 class ContextBuilder:
     """
     Builds token-efficient context payloads for Claude.

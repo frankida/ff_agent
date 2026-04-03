@@ -3,6 +3,7 @@ from .prompts import SYSTEM_PROMPT
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 1024
+TOKEN_WARNING_THRESHOLD = 80_000  # warn when approaching context limits
 
 
 class FantasyAIClient:
@@ -54,3 +55,71 @@ class FantasyAIClient:
             return bool(msg.content)
         except Exception:
             return False
+
+
+class DraftConversation:
+    """
+    Maintains a multi-turn conversation with Claude across the entire draft.
+    Each send() call includes the full message history so Claude has complete
+    context of every recommendation, opponent pick, and roster decision.
+    """
+
+    def __init__(self, api_key: str, model: str = DEFAULT_MODEL):
+        self._client = anthropic.Anthropic(api_key=api_key)
+        self.model = model
+        self.messages: list[dict] = []
+
+    def send(self, content: str, stream: bool = True) -> str:
+        """
+        Append a user message, call Claude with full history, append response.
+        Streams by default so the user sees output as it's generated.
+        """
+        self.messages.append({"role": "user", "content": content})
+
+        estimate = self.get_token_estimate()
+        if estimate > TOKEN_WARNING_THRESHOLD:
+            print(f"[Warning: ~{estimate:,} tokens in context, approaching limits]")
+
+        if stream:
+            response = self._stream_with_history()
+        else:
+            response = self._blocking_with_history()
+
+        self.messages.append({"role": "assistant", "content": response})
+        return response
+
+    def inject_context(self, content: str) -> None:
+        """
+        Silently inject context (e.g. opponent picks) without making an API call.
+        Pre-populates history with a user message and a canned "Noted." response
+        so Claude treats it as established context on the next real send().
+        """
+        self.messages.append({"role": "user", "content": content})
+        self.messages.append({"role": "assistant", "content": "Noted."})
+
+    def get_token_estimate(self) -> int:
+        """Rough token count: ~4 chars per token."""
+        return sum(len(m["content"]) for m in self.messages) // 4
+
+    def _stream_with_history(self) -> str:
+        full_response = ""
+        with self._client.messages.stream(
+            model=self.model,
+            max_tokens=MAX_TOKENS,
+            system=SYSTEM_PROMPT,
+            messages=self.messages,
+        ) as stream:
+            for text in stream.text_stream:
+                print(text, end="", flush=True)
+                full_response += text
+        print()
+        return full_response
+
+    def _blocking_with_history(self) -> str:
+        msg = self._client.messages.create(
+            model=self.model,
+            max_tokens=MAX_TOKENS,
+            system=SYSTEM_PROMPT,
+            messages=self.messages,
+        )
+        return msg.content[0].text
