@@ -141,23 +141,40 @@ class FantasyProsConnector:
                 pass
 
         # Fallback: parse HTML table
+        # Table columns: rank | player (name+team+bye) | pos_rank | best | worst | adp | sort
         soup = BeautifulSoup(html, "lxml")
         rows = soup.select("table#data tbody tr")
         result = []
         for row in rows:
             cols = row.select("td")
-            if len(cols) < 5:
+            if len(cols) < 6:
                 continue
             name_el = row.select_one("a.player-name")
+            if not name_el:
+                continue
+
+            # Team is in the first <small> tag inside the player label cell
+            team_el = cols[1].select_one("small")
+            team = team_el.text.strip() if team_el else ""
+
+            # Positional rank cell is "WR1", "RB3" etc — strip digits to get position
+            pos_rank_str = cols[2].text.strip()  # e.g. "WR1"
+            position = re.sub(r"\d+", "", pos_rank_str).strip()
+            pos_rank_num = self._parse_pos_rank(pos_rank_str)
+
+            # ADP is in cols[5]; cols[-1] is a hidden sort column, not the display value
             try:
-                adp_val = float(cols[-1].text.strip().replace(",", ""))
-            except ValueError:
+                adp_val = float(cols[5].text.strip().replace(",", ""))
+            except (ValueError, IndexError):
                 adp_val = 999.0
+
             result.append({
-                "name": name_el.text.strip() if name_el else "",
+                "name": name_el.text.strip(),
+                "team": team,
+                "position": position,
                 "adp": adp_val,
                 "overall_rank": None,
-                "positional_rank": None,
+                "positional_rank": pos_rank_num,
             })
         return result
 
