@@ -103,10 +103,11 @@ class TestMockDraftSimulator:
     def test_snake_round2_opponents_pick_in_reverse(self):
         """
         After user picks at position 3 in round 1, simulate_opponents_until_my_pick
-        covers ALL picks between two user turns:
+        covers ALL picks between two user turns (snake draft, fixed is_my_pick):
           - Round 1 remainder: positions 4,5,6,7,8,9,10  = 7 picks
-          - Round 2 (descending): pick_in_round 10→9→8→7→6→5→4 = 7 picks
-          - Total: 14 opponent picks before user's round 2 turn
+          - Round 2 (descending): user's mirrored slot = total_teams - pick_position + 1
+            = 10 - 3 + 1 = 8. Opponents pick at 10, 9 = 2 picks before user's turn.
+          - Total: 9 opponent picks before user's round 2 turn
         """
         state = _make_state(pick_position=3, total_teams=10)
         pool = _make_pool(30)
@@ -118,19 +119,18 @@ class TestMockDraftSimulator:
 
         sim.record_user_pick(pool[2])   # our round 1 pick at position 3
 
-        # Now simulate until round 2, position 3 (all remaining R1 + R2 up to our pick)
+        # Now simulate until round 2, mirrored position (all remaining R1 + R2 up to our pick)
         opp_picks = []
         sim.simulate_opponents_until_my_pick(
             on_opponent_pick=lambda p, r, pk: opp_picks.append((r, pk))
         )
 
-        # 7 picks left in round 1 (positions 4-10) + 7 picks in round 2 (10→4)
-        assert len(opp_picks) == 14
-        # First 7 are round 1, last 7 are round 2
+        # 7 picks left in round 1 (positions 4-10) + 2 picks in round 2 (10→9 before slot 8)
+        assert len(opp_picks) == 9
         round1_picks = [pk for (r, pk) in opp_picks if r == 1]
         round2_picks = [pk for (r, pk) in opp_picks if r == 2]
         assert len(round1_picks) == 7
-        assert len(round2_picks) == 7
+        assert len(round2_picks) == 2
         assert state.is_my_pick() is True
         assert state.current_round == 2
 
