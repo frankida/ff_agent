@@ -1,0 +1,35 @@
+espn:
+  league_id: 0               # Set via config setup or .env
+  team_id: 1                 # Your team number (1-indexed)
+  scoring: standard
+  season: 2025
+  total_teams: 10
+  total_rounds: 15
+  roster_slots:
+    QB: 1
+    RB: 2
+    WR: 2
+    TE: 1
+    FLEX: 1                  # RB/WR/TE eligible
+    K: 1
+    DST: 1
+    BN: 6
+  playoff_weeks: [14, 15, 16]
+
+yahoo:
+  league_id: ""              # e.g. "nfl.l.1234567"
+  team_key: ""               # e.g. "nfl.l.1234567.t.4"
+  scoring: standard
+  season: 2025
+  total_teams: 12
+  total_rounds: 15
+  roster_slots:
+    QB: 1
+    RB: 2
+    WR: 2
+    TE: 1
+    FLEX: 1
+    K: 1
+    DST: 1
+    BN: 5
+  playoff_weeks: [14, 15, 16]
