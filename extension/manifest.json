@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Fantasy Agent – ESPN Draft Reader",
+  "version": "0.1.0",
+  "description": "Reads ESPN fantasy draft state and forwards picks to the local Fantasy Agent server.",
+
+  "permissions": ["activeTab"],
+  "host_permissions": ["http://localhost:5050/*"],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["*://fantasy.espn.com/football/draft*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["*://fantasy.espn.com/football/draft*"]
+    }
+  ]
+}
