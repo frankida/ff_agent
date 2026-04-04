@@ -99,7 +99,7 @@ def _player_label(p):
     return f"{p.name} · {p.position.value} · {p.nfl_team}{bye}"
 
 
-MENU_LINES = 4  # 3 options + 1 analysis line
+MENU_LINES = 5  # blank line + 3 options + 1 analysis line
 
 def pick_menu(rec_player, rec_pro, rec_con, alt_player, alt_note, service):
     """
@@ -123,6 +123,7 @@ def pick_menu(rec_player, rec_pro, rec_con, alt_player, alt_note, service):
     def draw(first=False):
         if not first:
             sys.stdout.write(f'\033[{MENU_LINES}A\033[J')
+        sys.stdout.write('\n')  # blank separator (counted in MENU_LINES)
         for i, label in enumerate(option_labels):
             arrow = '→' if i == sel else ' '
             sys.stdout.write(f'  {arrow} {label}\n')
@@ -136,7 +137,6 @@ def pick_menu(rec_player, rec_pro, rec_con, alt_player, alt_note, service):
             sys.stdout.write('\n')
         sys.stdout.flush()
 
-    print()
     draw(first=True)
 
     while True:

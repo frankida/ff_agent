@@ -174,11 +174,13 @@ class DraftService:
             if p.name.lower() == name_lower or self._norm(p.name) == name_norm:
                 return p
         # Partial: all words in query appear in player name (handles "bucky" → "Bucky Irving")
+        # Require at least 3 chars total to avoid false matches on single letters
         words = name_norm.split()
-        for p in self._player_pool:
-            pname = self._norm(p.name)
-            if all(w in pname for w in words):
-                return p
+        if len(name_norm.replace(' ', '')) >= 3:
+            for p in self._player_pool:
+                pname = self._norm(p.name)
+                if all(w in pname for w in words):
+                    return p
         # Fuzzy fallback
         try:
             from rapidfuzz import process, fuzz
