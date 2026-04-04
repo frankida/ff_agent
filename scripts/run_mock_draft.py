@@ -175,7 +175,13 @@ def main():
                 print_roster(service.show_my_roster())
             elif cmd.lower().startswith("pick "):
                 name = cmd[5:].strip()
-                player = service._find_player(name)
+                # Support picking by board number (e.g. "pick 3")
+                if name.isdigit():
+                    idx = int(name) - 1
+                    board = service.show_board(limit=25)
+                    player = board[idx] if 0 <= idx < len(board) else None
+                else:
+                    player = service._find_player(name)
                 if player:
                     simulator.record_user_pick(player)
                     service.conversation.inject_context(

@@ -162,14 +162,22 @@ class DraftService:
 
     def _find_player(self, name: str) -> Optional[Player]:
         name_lower = name.lower()
+        # Exact match
         for p in self._player_pool:
             if p.name.lower() == name_lower:
                 return p
+        # Partial: all words in query appear in player name (handles "bucky" → "Bucky Irving")
+        words = name_lower.split()
+        for p in self._player_pool:
+            pname = p.name.lower()
+            if all(w in pname for w in words):
+                return p
+        # Fuzzy fallback
         try:
             from rapidfuzz import process, fuzz
             names = [p.name for p in self._player_pool]
             result = process.extractOne(
-                name, names, scorer=fuzz.token_sort_ratio, score_cutoff=80
+                name, names, scorer=fuzz.token_sort_ratio, score_cutoff=75
             )
             if result:
                 matched_name = result[0]
