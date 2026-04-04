@@ -50,13 +50,136 @@ def print_board(players, limit=20):
         print(f"  {i:>2}. {p.name:<22} {p.position.value:<3} {p.nfl_team:<4} {adp}  {bye}{flag}")
 
 
-def parse_recommendation(response: str):
-    """Extract (pick_name, alt_name) from Claude's 4-line formatted response."""
-    pick = re.search(r'PICK:\s+([^·•\n]+?)\s+[·•]', response)
-    alt  = re.search(r'ALT:\s+([^·•\n←]+?)\s+[·•←]', response)
-    pick_name = pick.group(1).strip() if pick else None
-    alt_name  = alt.group(1).strip()  if alt  else None
-    return pick_name, alt_name
+def parse_recommendation(response: str) -> dict:
+    """Extract PICK/PRO/CON/ALT/ALT_NOTE from Claude's 4-line formatted response."""
+    pick     = re.search(r'PICK:\s+([^·•\n]+?)\s+[·•]', response)
+    pro      = re.search(r'PRO:\s+(.+)', response)
+    con      = re.search(r'CON:\s+(.+)', response)
+    alt      = re.search(r'ALT:\s+([^·•\n←]+?)\s+[·•←]', response)
+    alt_note = re.search(r'ALT:.*?[←]\s*(.+)', response)
+    return {
+        "pick":     pick.group(1).strip()     if pick     else None,
+        "pro":      pro.group(1).strip()      if pro      else None,
+        "con":      con.group(1).strip()      if con      else None,
+        "alt":      alt.group(1).strip()      if alt      else None,
+        "alt_note": alt_note.group(1).strip() if alt_note else None,
+    }
+
+
+# ── Arrow-key pick menu ─────────────────────────────────────────────────────
+
+def _read_key():
+    """Read one keypress in raw mode. Returns 'UP', 'DOWN', 'ENTER', or char."""
+    import tty, termios, select
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        ch = sys.stdin.read(1)
+        if ch == '\x1b':
+            if select.select([sys.stdin], [], [], 0.05)[0]:
+                ch2 = sys.stdin.read(1)
+                if ch2 == '[' and select.select([sys.stdin], [], [], 0.05)[0]:
+                    ch3 = sys.stdin.read(1)
+                    if ch3 == 'A': return 'UP'
+                    if ch3 == 'B': return 'DOWN'
+            return 'ESC'
+        if ch in ('\r', '\n'): return 'ENTER'
+        if ch == '\x03': raise KeyboardInterrupt
+        if ch == '\x7f': return 'BACKSPACE'
+        return ch
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
+def _player_label(p):
+    if p is None:
+        return ""
+    bye = f"  bye wk{p.bye_week}" if p.bye_week else ""
+    return f"{p.name} · {p.position.value} · {p.nfl_team}{bye}"
+
+
+MENU_LINES = 4  # 3 options + 1 analysis line
+
+def pick_menu(rec_player, rec_pro, rec_con, alt_player, alt_note, service):
+    """
+    Arrow-key interactive menu. Returns a Player to draft, or None to quit.
+    Up/down navigate. Enter confirms. Digit or name typed = board pick.
+    """
+    options = [rec_player, alt_player, None]
+    option_labels = [
+        f"r   {_player_label(rec_player) or '(no rec)'}",
+        f"a   {_player_label(alt_player) or '(no alt)'}",
+        f"N   choose from board  (type a number or name)",
+    ]
+    notes = [
+        (f"PRO: {rec_pro}  |  CON: {rec_con}") if rec_pro or rec_con else "",
+        alt_note or "",
+        "",
+    ]
+    sel = 0
+    typed = ""  # accumulates digits/chars when board option is selected
+
+    def draw(first=False):
+        if not first:
+            sys.stdout.write(f'\033[{MENU_LINES}A\033[J')
+        for i, label in enumerate(option_labels):
+            arrow = '→' if i == sel else ' '
+            sys.stdout.write(f'  {arrow} {label}\n')
+        # Analysis line
+        note = notes[sel]
+        if sel == 2 and typed:
+            sys.stdout.write(f'    ↳ {typed}_\n')
+        elif note:
+            sys.stdout.write(f'    ↳ {note}\n')
+        else:
+            sys.stdout.write('\n')
+        sys.stdout.flush()
+
+    print()
+    draw(first=True)
+
+    while True:
+        key = _read_key()
+
+        if key == 'UP':
+            sel = (sel - 1) % 3
+            typed = ""
+            draw()
+        elif key == 'DOWN':
+            sel = (sel + 1) % 3
+            typed = ""
+            draw()
+        elif key == 'ENTER':
+            print()
+            if sel in (0, 1):
+                return options[sel]
+            else:
+                # board pick — typed may already have content
+                if not typed:
+                    sys.stdout.write('  Board # or name: ')
+                    sys.stdout.flush()
+                    import termios as _t
+                    _t.tcsetattr(sys.stdin.fileno(), _t.TCSADRAIN,
+                                 _t.tcgetattr(sys.stdin.fileno()))
+                    typed = input('')
+                if typed.isdigit():
+                    board = service.show_board(limit=25)
+                    idx = int(typed) - 1
+                    return board[idx] if 0 <= idx < len(board) else None
+                else:
+                    return service._find_player(typed)
+        elif key == 'q':
+            return 'QUIT'
+        elif key == 'BACKSPACE':
+            if typed:
+                typed = typed[:-1]
+                draw()
+        elif key.isprintable():
+            # Any printable char auto-switches to board option and accumulates
+            sel = 2
+            typed += key
+            draw()
 
 
 def print_roster(players):
@@ -136,8 +259,7 @@ def main():
     )
 
     use_stream = not args.no_stream
-    print("Commands: r=rec  a=alt  N=board#  name | board [POS] | roster | next | q")
-    print("  or ask Claude anything\n")
+    print("Arrow keys to choose · Enter to draft · type to search board · q to quit\n")
 
     round_num = 0
     while not service.state.is_complete():
@@ -164,65 +286,35 @@ def main():
         print(f"\n▶ YOUR PICK  R{service.state.current_round} · #{service.state.overall_pick} overall")
         print_board(service.show_board(limit=15))
         rec_response = service.get_recommendation()
-        rec_name, alt_name = parse_recommendation(rec_response)
+        rec = parse_recommendation(rec_response)
 
-        def _draft(player):
-            simulator.record_user_pick(player)
-            service.conversation.inject_context(
-                f"I drafted {player.name} ({player.position.value}, {player.nfl_team})."
-            )
-            print(f"\n  ✓ Drafted: {player.name} ({player.position.value})")
+        rec_player = service._find_player(rec["pick"]) if rec["pick"] else None
+        alt_player = service._find_player(rec["alt"])  if rec["alt"]  else None
 
         while True:
-            try:
-                cmd = input("\n> ").strip()
-            except EOFError:
-                cmd = "q"
+            result = pick_menu(
+                rec_player=rec_player,
+                rec_pro=rec["pro"],
+                rec_con=rec["con"],
+                alt_player=alt_player,
+                alt_note=rec["alt_note"],
+                service=service,
+            )
 
-            if not cmd:
-                continue
-            elif cmd.lower() == "q":
+            if result == 'QUIT':
                 print("\nDraft ended early.")
                 print_roster(service.show_my_roster())
                 return
-            elif cmd.lower() in ("r", "rec"):
-                player = service._find_player(rec_name) if rec_name else None
-                if player:
-                    _draft(player)
-                    break
-                else:
-                    print("  Could not parse recommended pick. Use a board number instead.")
-            elif cmd.lower() in ("a", "alt"):
-                player = service._find_player(alt_name) if alt_name else None
-                if player:
-                    _draft(player)
-                    break
-                else:
-                    print("  Could not parse alt pick. Use a board number instead.")
-            elif cmd.lower() == "next":
-                rec_response = service.get_recommendation()
-                rec_name, alt_name = parse_recommendation(rec_response)
-            elif cmd.lower() == "board" or cmd.lower().startswith("board "):
-                parts = cmd.split()
-                pos = parts[1].upper() if len(parts) > 1 else None
-                print_board(service.show_board(position=pos, limit=25))
-            elif cmd.lower() == "roster":
-                print_roster(service.show_my_roster())
-            elif cmd.isdigit() or cmd.lower().startswith("pick "):
-                name = cmd[5:].strip() if cmd.lower().startswith("pick ") else cmd
-                if name.isdigit():
-                    idx = int(name) - 1
-                    board = service.show_board(limit=25)
-                    player = board[idx] if 0 <= idx < len(board) else None
-                else:
-                    player = service._find_player(name)
-                if player:
-                    _draft(player)
-                    break
-                else:
-                    print(f"  '{name}' not found. Try 'board' or a board number.")
+            elif result is None:
+                print("  Player not found. Try again.")
+                continue
             else:
-                service.chat(cmd)
+                simulator.record_user_pick(result)
+                service.conversation.inject_context(
+                    f"I drafted {result.name} ({result.position.value}, {result.nfl_team})."
+                )
+                print(f"  ✓ Drafted: {result.name} ({result.position.value})")
+                break
 
     print("\n── Draft complete ──")
     print_roster(service.show_my_roster())
