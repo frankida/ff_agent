@@ -57,11 +57,14 @@ class FantasyAIClient:
             return False
 
 
+HISTORY_WINDOW = 24  # recent messages to keep (beyond the initial briefing pair)
+
+
 class DraftConversation:
     """
     Maintains a multi-turn conversation with Claude across the entire draft.
-    Each send() call includes the full message history so Claude has complete
-    context of every recommendation, opponent pick, and roster decision.
+    Keeps the initial briefing + a rolling window of recent messages so context
+    stays bounded and latency doesn't grow with each round.
     """
 
     def __init__(self, api_key: str, model: str = DEFAULT_MODEL):
@@ -69,16 +72,18 @@ class DraftConversation:
         self.model = model
         self.messages: list[dict] = []
 
+    def _windowed_messages(self) -> list[dict]:
+        """Return briefing (first 2 msgs) + last HISTORY_WINDOW messages."""
+        if len(self.messages) <= 2 + HISTORY_WINDOW:
+            return self.messages
+        return self.messages[:2] + self.messages[-(HISTORY_WINDOW):]
+
     def send(self, content: str, stream: bool = True) -> str:
         """
-        Append a user message, call Claude with full history, append response.
+        Append a user message, call Claude with windowed history, append response.
         Streams by default so the user sees output as it's generated.
         """
         self.messages.append({"role": "user", "content": content})
-
-        estimate = self.get_token_estimate()
-        if estimate > TOKEN_WARNING_THRESHOLD:
-            print(f"[Warning: ~{estimate:,} tokens in context, approaching limits]")
 
         if stream:
             response = self._stream_with_history()
@@ -107,7 +112,7 @@ class DraftConversation:
             model=self.model,
             max_tokens=MAX_TOKENS,
             system=SYSTEM_PROMPT,
-            messages=self.messages,
+            messages=self._windowed_messages(),
         ) as stream:
             for text in stream.text_stream:
                 print(text, end="", flush=True)
@@ -120,6 +125,6 @@ class DraftConversation:
             model=self.model,
             max_tokens=MAX_TOKENS,
             system=SYSTEM_PROMPT,
-            messages=self.messages,
+            messages=self._windowed_messages(),
         )
         return msg.content[0].text
