@@ -186,8 +186,14 @@ def main():
                 else:
                     print(f"  '{name}' not found. Try 'board' or a different spelling.")
             else:
-                # Free-form question
-                service.chat(cmd)
+                # If it looks like a player name (short, no spaces or one word), try pick first
+                if len(cmd.split()) <= 3 and service._find_player(cmd):
+                    player = service._find_player(cmd)
+                    print(f"  (tip: use 'pick {cmd}' to draft, or ask a question)")
+                    service.chat(cmd)
+                else:
+                    # Free-form question
+                    service.chat(cmd)
 
     print("\n── Draft complete ──")
     print_roster(service.show_my_roster())
