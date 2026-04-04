@@ -175,9 +175,9 @@ def main():
                 print_board(service.show_board(position=pos, limit=25))
             elif cmd.lower() == "roster":
                 print_roster(service.show_my_roster())
-            elif cmd.lower().startswith("pick "):
-                name = cmd[5:].strip()
-                # Support picking by board number (e.g. "pick 3")
+            elif cmd.isdigit() or cmd.lower().startswith("pick "):
+                name = cmd[5:].strip() if cmd.lower().startswith("pick ") else cmd
+                # Support picking by board number (e.g. "5" or "pick 5")
                 if name.isdigit():
                     idx = int(name) - 1
                     board = service.show_board(limit=25)
