@@ -35,9 +35,7 @@ class DraftService:
 
     def initialize(self):
         """Load the full draft player pool and inject opening briefing into conversation."""
-        print("Loading player pool from FantasyPros (standard scoring)...", end=" ", flush=True)
         self._player_pool = self.aggregator.get_draft_player_pool(limit=300)
-        print(f"Done. {len(self._player_pool)} players loaded.")
 
         # Inject the opening briefing — no API call, just seeds the conversation history
         briefing = build_draft_briefing(

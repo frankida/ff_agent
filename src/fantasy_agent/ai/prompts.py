@@ -38,10 +38,10 @@ Recommend the single best pick right now. Consider:
 4. Roster construction — don't stack the same position twice early unless the value gap is massive
 5. Injury flags
 
-FORMAT — use exactly these lines, nothing else:
+FORMAT — exactly these 3 lines, nothing else. Keep WHY under 15 words:
 ▶ PICK:  [Name] · [POS] · [Team]
-   WHY:  [1–2 sentences — value gap, role, standard scoring fit]
-   ALT:  [Name] · [POS] · [Team]  ← must be the opposite position (RB↔WR)"""
+   WHY:  [max 15 words — value gap or positional reason]
+   ALT:  [Name] · [POS] · [Team]  ← opposite position to main pick (RB↔WR)"""
 
 
 START_SIT_PROMPT = """WEEK {week} START/SIT — STANDARD SCORING

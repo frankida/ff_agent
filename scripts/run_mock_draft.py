@@ -95,13 +95,10 @@ def main():
             except (ValueError, EOFError):
                 print("  Invalid input.")
 
-    print(f"\n{'='*60}")
-    print(f"  Mock Draft — {args.teams} teams, {args.rounds} rounds")
-    print(f"  Your pick: #{pick_position} | Standard scoring")
-    print(f"{'='*60}")
+    print(f"\nMock Draft  {args.teams} teams · {args.rounds} rounds · pick #{pick_position} · standard")
 
     # Load data
-    print("\nLoading player data (Sleeper + FantasyPros)...", flush=True)
+    print("\nLoading...", flush=True)
     t0 = time.time()
     aggregator = DataAggregator(
         espn=None, yahoo=None,
@@ -136,9 +133,7 @@ def main():
         # Print round header
         if service.state.current_round != round_num:
             round_num = service.state.current_round
-            print(f"\n{'─'*50}")
-            print(f"  ROUND {round_num}")
-            print(f"{'─'*50}")
+            print(f"\n── Round {round_num} {'─'*30}")
 
         # Auto-pick opponents, batch inject into conversation
         opp_picks = []
@@ -194,9 +189,7 @@ def main():
                 # Free-form question
                 service.chat(cmd)
 
-    print(f"\n{'='*60}")
-    print("  DRAFT COMPLETE")
-    print(f"{'='*60}")
+    print("\n── Draft complete ──")
     print_roster(service.show_my_roster())
 
 
