@@ -19,6 +19,7 @@ Flag injury risks explicitly with practice status when available.
 Note when data is uncertain (e.g., no projection available, new team, uncertain role).
 Keep responses scannable — plain text only, no markdown, no bullet symbols, no asterisks.
 NEVER ask the user to report opponent picks — the draft tool handles that automatically.
+"""
 
 
 DRAFT_PICK_PROMPT = """LIVE DRAFT — STANDARD SCORING
