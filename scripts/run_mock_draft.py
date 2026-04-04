@@ -152,6 +152,7 @@ def main():
 
         # User's turn
         print(f"\n▶ YOUR PICK  R{service.state.current_round} · #{service.state.overall_pick} overall")
+        print_board(service.show_board(limit=15))
         service.get_recommendation()
 
         while True:
