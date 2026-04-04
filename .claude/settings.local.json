@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/francishahn/Documents/0_code/fantasy-agent -type f -name README* -o -name *.md -o -name *.txt -o -name setup.py -o -name pyproject.toml -o -name package.json -o -name requirements.txt -o -name Makefile)",
+      "Bash(find /Users/francishahn/Documents/0_code/fantasy-agent -type d -not -path */.* -not -path */__pycache__)",
+      "Bash(xargs ls:*)",
+      "Bash(git worktree:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git init:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(pip show:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:draftkick.com)",
+      "WebFetch(domain:jman4190.medium.com)",
+      "WebFetch(domain:www.rotowire.com)",
+      "WebFetch(domain:gist.github.com)",
+      "Bash(git log:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git:*)",
+      "Bash(PYTHONPATH=src python -m pytest tests/test_models.py -v)",
+      "Bash(PYTHONPATH=src python -m pytest tests/test_cli_utils.py -v)",
+      "Bash(pip install:*)",
+      "Bash(PYTHONPATH=src python scripts/validate_sleeper.py)",
+      "Bash(PYTHONPATH=src python scripts/validate_fantasypros.py)",
+      "Bash(PYTHONPATH=src python -c \"from fantasy_agent.cache.manager import clear_cache; clear_cache\\(\\); print\\(''Cache cleared''\\)\")",
+      "Bash(PYTHONPATH=src python -m pytest tests/test_draft_conversation.py -v 2>&1)",
+      "Bash(PYTHONPATH=src python -m pytest tests/test_draft_conversation.py -v)"
+    ]
+  }
+}

@@ -50,7 +50,7 @@ class TestPlayer:
             bye_week=10,
         )
         summary = p.to_llm_summary()
-        assert "BYE 10" in summary
+        assert "bye wk10" in summary
 
     def test_to_llm_summary_no_adp(self):
         p = Player(name="Unknown", position=Position.WR, nfl_team="FA")

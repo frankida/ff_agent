@@ -85,6 +85,10 @@ class DraftConversation:
         """
         self.messages.append({"role": "user", "content": content})
 
+        estimate = self.get_token_estimate()
+        if estimate > TOKEN_WARNING_THRESHOLD:
+            print(f"[Warning: ~{estimate:,} tokens in context, approaching limits]")
+
         if stream:
             response = self._stream_with_history()
         else:
