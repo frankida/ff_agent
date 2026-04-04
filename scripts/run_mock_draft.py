@@ -21,6 +21,7 @@ Commands during draft:
 """
 import sys
 import os
+import re
 import argparse
 import time
 
@@ -47,6 +48,15 @@ def print_board(players, limit=20):
         if p.injury_status not in (InjuryStatus.ACTIVE, InjuryStatus.UNKNOWN):
             flag = " !" + p.injury_status.value[:3].upper()
         print(f"  {i:>2}. {p.name:<22} {p.position.value:<3} {p.nfl_team:<4} {adp}  {bye}{flag}")
+
+
+def parse_recommendation(response: str):
+    """Extract (pick_name, alt_name) from Claude's 4-line formatted response."""
+    pick = re.search(r'PICK:\s+([^·•\n]+?)\s+[·•]', response)
+    alt  = re.search(r'ALT:\s+([^·•\n←]+?)\s+[·•←]', response)
+    pick_name = pick.group(1).strip() if pick else None
+    alt_name  = alt.group(1).strip()  if alt  else None
+    return pick_name, alt_name
 
 
 def print_roster(players):
@@ -126,8 +136,8 @@ def main():
     )
 
     use_stream = not args.no_stream
-    print("Commands: next | pick NAME | board [POS] | roster | q")
-    print("  or type any question to ask Claude\n")
+    print("Commands: r=rec  a=alt  N=board#  name | board [POS] | roster | next | q")
+    print("  or ask Claude anything\n")
 
     round_num = 0
     while not service.state.is_complete():
@@ -153,7 +163,15 @@ def main():
         # User's turn
         print(f"\n▶ YOUR PICK  R{service.state.current_round} · #{service.state.overall_pick} overall")
         print_board(service.show_board(limit=15))
-        service.get_recommendation()
+        rec_response = service.get_recommendation()
+        rec_name, alt_name = parse_recommendation(rec_response)
+
+        def _draft(player):
+            simulator.record_user_pick(player)
+            service.conversation.inject_context(
+                f"I drafted {player.name} ({player.position.value}, {player.nfl_team})."
+            )
+            print(f"\n  ✓ Drafted: {player.name} ({player.position.value})")
 
         while True:
             try:
@@ -167,8 +185,23 @@ def main():
                 print("\nDraft ended early.")
                 print_roster(service.show_my_roster())
                 return
+            elif cmd.lower() in ("r", "rec"):
+                player = service._find_player(rec_name) if rec_name else None
+                if player:
+                    _draft(player)
+                    break
+                else:
+                    print("  Could not parse recommended pick. Use a board number instead.")
+            elif cmd.lower() in ("a", "alt"):
+                player = service._find_player(alt_name) if alt_name else None
+                if player:
+                    _draft(player)
+                    break
+                else:
+                    print("  Could not parse alt pick. Use a board number instead.")
             elif cmd.lower() == "next":
-                service.get_recommendation()
+                rec_response = service.get_recommendation()
+                rec_name, alt_name = parse_recommendation(rec_response)
             elif cmd.lower() == "board" or cmd.lower().startswith("board "):
                 parts = cmd.split()
                 pos = parts[1].upper() if len(parts) > 1 else None
@@ -177,7 +210,6 @@ def main():
                 print_roster(service.show_my_roster())
             elif cmd.isdigit() or cmd.lower().startswith("pick "):
                 name = cmd[5:].strip() if cmd.lower().startswith("pick ") else cmd
-                # Support picking by board number (e.g. "5" or "pick 5")
                 if name.isdigit():
                     idx = int(name) - 1
                     board = service.show_board(limit=25)
@@ -185,23 +217,12 @@ def main():
                 else:
                     player = service._find_player(name)
                 if player:
-                    simulator.record_user_pick(player)
-                    service.conversation.inject_context(
-                        f"I drafted {player.name} ({player.position.value}, {player.nfl_team})."
-                    )
-                    print(f"\n  ✓ Drafted: {player.name} ({player.position.value})")
+                    _draft(player)
                     break
                 else:
-                    print(f"  '{name}' not found. Try 'board' or a different spelling.")
+                    print(f"  '{name}' not found. Try 'board' or a board number.")
             else:
-                # If it looks like a player name (short, no spaces or one word), try pick first
-                if len(cmd.split()) <= 3 and service._find_player(cmd):
-                    player = service._find_player(cmd)
-                    print(f"  (tip: use 'pick {cmd}' to draft, or ask a question)")
-                    service.chat(cmd)
-                else:
-                    # Free-form question
-                    service.chat(cmd)
+                service.chat(cmd)
 
     print("\n── Draft complete ──")
     print_roster(service.show_my_roster())
