@@ -39,14 +39,13 @@ from fantasy_agent.models.player import InjuryStatus
 # ── Display helpers ────────────────────────────────────────────────────────────
 
 def print_board(players, limit=20):
-    print(f"\n{'#':>3}  {'Name':<22} {'Pos':<5} {'Team':<5} {'ADP':>6}  Status")
-    print("─" * 60)
+    print()
     for i, p in enumerate(players[:limit], 1):
-        adp = f"{p.adp:.1f}" if p.adp < 999 else "-"
-        status = ""
+        adp = f"adp:{p.adp:.0f}" if p.adp < 999 else "    "
+        flag = ""
         if p.injury_status not in (InjuryStatus.ACTIVE, InjuryStatus.UNKNOWN):
-            status = f"[{p.injury_status.value}]"
-        print(f"{i:>3}. {p.name:<22} {p.position.value:<5} {p.nfl_team:<5} {adp:>6}  {status}")
+            flag = " !" + p.injury_status.value[:3].upper()
+        print(f"  {i:>2}. {p.name:<22} {p.position.value:<3} {p.nfl_team:<4} {adp}{flag}")
 
 
 def print_roster(players):
@@ -55,10 +54,11 @@ def print_roster(players):
         return
     from collections import Counter
     counts = Counter(p.position.value for p in players)
-    print(f"\n  Your roster ({len(players)} picks):")
+    summary = "  ".join(f"{pos}:{n}" for pos, n in sorted(counts.items()))
+    print(f"\n  {summary}")
+    print()
     for i, p in enumerate(players, 1):
-        print(f"  {i:>2}. {p.name:<22} {p.position.value:<4} {p.nfl_team}")
-    print(f"\n  Positions: {dict(counts)}")
+        print(f"  {i:>2}. {p.name:<22} {p.position.value:<3} {p.nfl_team}")
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -144,7 +144,7 @@ def main():
         opp_picks = []
         def on_opp(player, r, pk):
             opp_picks.append(player)
-            print(f"  Pick {pk:>2}  {player.name:<22} {player.position.value:<4} {player.nfl_team}")
+            print(f"  {pk:>2}. {player.name:<22} {player.position.value:<3} {player.nfl_team}")
 
         simulator.simulate_opponents_until_my_pick(on_opponent_pick=on_opp)
 
@@ -155,7 +155,7 @@ def main():
             break
 
         # User's turn
-        print(f"\n>>> YOUR PICK — Round {service.state.current_round}, Overall #{service.state.overall_pick}")
+        print(f"\n▶ YOUR PICK  R{service.state.current_round} · #{service.state.overall_pick} overall")
         service.get_recommendation()
 
         while True:

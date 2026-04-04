@@ -90,9 +90,7 @@ class DraftService:
         ctx = self.ctx.build_draft_context(self.state, available)
         prompt = DRAFT_PICK_PROMPT.format(**ctx)
 
-        print(f"\n{'='*50}")
-        print(f"Round {self.state.current_round} | Pick {self.state.pick_in_round} | Overall #{self.state.overall_pick}")
-        print(f"{'='*50}")
+        print()
         return self.conversation.send(prompt, stream=True)
 
     def chat(self, user_input: str) -> str:

@@ -38,13 +38,10 @@ Recommend the single best pick right now. Consider:
 4. Roster construction — don't stack the same position twice early unless the value gap is massive
 5. Injury flags
 
-FORMAT YOUR RESPONSE EXACTLY LIKE THIS — no extra text, no explanations outside these four lines:
-PICK: [Name] | [Position] | [Team]
-CONFIDENCE: [High / Medium / Low]
-REASON: [2–3 sentences max]
-IF YOU WANT [opposite position — RB if main pick is WR, WR if main pick is RB]: [Name] | [Position] | [Team]
-
-The IF YOU WANT line must name the best player at the OTHER key position (RB↔WR). Never suggest the same position as your main pick."""
+FORMAT — use exactly these lines, nothing else:
+▶ PICK:  [Name] · [POS] · [Team]
+   WHY:  [1–2 sentences — value gap, role, standard scoring fit]
+   ALT:  [Name] · [POS] · [Team]  ← must be the opposite position (RB↔WR)"""
 
 
 START_SIT_PROMPT = """WEEK {week} START/SIT — STANDARD SCORING
