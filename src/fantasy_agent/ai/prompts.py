@@ -38,12 +38,13 @@ Recommend the single best pick right now. Consider:
 2. ADP value — is anyone falling past their value?
 3. Standard scoring fit (workhorse RBs > committee backs; TD-upside WRs/TEs > reception merchants)
 4. Roster construction — don't stack the same position twice early unless the value gap is massive
-5. Injury flags
+5. Injury flags and bye week conflicts (flag if bye week clashes with playoff weeks 14-16)
 
-FORMAT — exactly these 3 lines, nothing else. Keep WHY under 15 words:
-▶ PICK:  [Name] · [POS] · [Team]
-   WHY:  [max 15 words — value gap or positional reason]
-   ALT:  [Name] · [POS] · [Team]  ← opposite position to main pick (RB↔WR)"""
+FORMAT — exactly these 4 lines, nothing else:
+▶ PICK:  [Name] · [POS] · [Team]  (bye wk[N])
+   PRO:  [max 12 words — best reason to draft: value, role, upside]
+   CON:  [max 12 words — biggest risk: injury, role uncertainty, bye, or schedule]
+   ALT:  [Name] · [POS] · [Team]  ← must be opposite position to PICK (if PICK=RB, ALT=WR; if PICK=WR, ALT=RB)"""
 
 
 START_SIT_PROMPT = """WEEK {week} START/SIT — STANDARD SCORING

@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from typing import Optional
 from ..models.draft import DraftState
@@ -160,16 +161,22 @@ class DraftService:
         drafted_names = {p.name.lower() for p in self.state.all_drafted}
         return player.name.lower() in drafted_names
 
+    @staticmethod
+    def _norm(s: str) -> str:
+        """Strip dots/punctuation for matching: 'a.j.' → 'aj', 'D.K.' → 'dk'."""
+        return re.sub(r'[^a-z0-9 ]', '', s.lower())
+
     def _find_player(self, name: str) -> Optional[Player]:
         name_lower = name.lower()
-        # Exact match
+        name_norm = self._norm(name)
+        # Exact match (raw and normalized)
         for p in self._player_pool:
-            if p.name.lower() == name_lower:
+            if p.name.lower() == name_lower or self._norm(p.name) == name_norm:
                 return p
         # Partial: all words in query appear in player name (handles "bucky" → "Bucky Irving")
-        words = name_lower.split()
+        words = name_norm.split()
         for p in self._player_pool:
-            pname = p.name.lower()
+            pname = self._norm(p.name)
             if all(w in pname for w in words):
                 return p
         # Fuzzy fallback

@@ -42,10 +42,11 @@ def print_board(players, limit=20):
     print()
     for i, p in enumerate(players[:limit], 1):
         adp = f"adp:{p.adp:.0f}" if p.adp < 999 else "    "
+        bye = f"bye:{p.bye_week}" if p.bye_week else "     "
         flag = ""
         if p.injury_status not in (InjuryStatus.ACTIVE, InjuryStatus.UNKNOWN):
             flag = " !" + p.injury_status.value[:3].upper()
-        print(f"  {i:>2}. {p.name:<22} {p.position.value:<3} {p.nfl_team:<4} {adp}{flag}")
+        print(f"  {i:>2}. {p.name:<22} {p.position.value:<3} {p.nfl_team:<4} {adp}  {bye}{flag}")
 
 
 def print_roster(players):

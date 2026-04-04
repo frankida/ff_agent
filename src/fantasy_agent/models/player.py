@@ -84,7 +84,7 @@ class Player:
             detail = f"-{self.injury_detail}" if self.injury_detail else ""
             injury_flag = f" [{self.injury_status.value}{detail}]"
 
-        bye_flag = f" [BYE {self.bye_week}]" if self.is_on_bye else ""
+        bye_flag = f" [bye wk{self.bye_week}]" if self.bye_week else ""
         proj = f"{self.projected_points:.1f}" if self.projected_points else "N/A"
         avg = f"{self.stats.avg_points_per_game:.1f}" if self.stats.avg_points_per_game else "N/A"
         adp = f"{self.adp:.1f}" if self.adp < 999 else "N/A"
