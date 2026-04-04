@@ -99,7 +99,13 @@ def _player_label(p):
     return f"{p.name} · {p.position.value} · {p.nfl_team}{bye}"
 
 
-MENU_LINES = 5  # blank line + 3 options + 1 analysis line
+MENU_LINES = 6  # blank line + 3 options + 2 analysis lines
+_TRUNC = 72     # max chars per analysis line before truncation
+
+
+def _trunc(s, n=_TRUNC):
+    return s if len(s) <= n else s[:n - 1] + "…"
+
 
 def pick_menu(rec_player, rec_pro, rec_con, alt_player, alt_note, service):
     """
@@ -112,10 +118,12 @@ def pick_menu(rec_player, rec_pro, rec_con, alt_player, alt_note, service):
         f"a   {_player_label(alt_player) or '(no alt)'}",
         f"N   choose from board  (type a number or name)",
     ]
-    notes = [
-        (f"PRO: {rec_pro}  |  CON: {rec_con}") if rec_pro or rec_con else "",
-        alt_note or "",
-        "",
+    # 2-line analysis per option: (line1, line2)
+    analysis = [
+        (_trunc(f"PRO: {rec_pro}") if rec_pro else "",
+         _trunc(f"CON: {rec_con}") if rec_con else ""),
+        (_trunc(alt_note) if alt_note else "", ""),
+        ("", ""),
     ]
     sel = 0
     typed = ""  # accumulates digits/chars when board option is selected
@@ -127,59 +135,73 @@ def pick_menu(rec_player, rec_pro, rec_con, alt_player, alt_note, service):
         for i, label in enumerate(option_labels):
             arrow = '→' if i == sel else ' '
             sys.stdout.write(f'  {arrow} {label}\n')
-        # Analysis line
-        note = notes[sel]
+        # 2 analysis lines
+        l1, l2 = analysis[sel]
         if sel == 2 and typed:
-            sys.stdout.write(f'    ↳ {typed}_\n')
-        elif note:
-            sys.stdout.write(f'    ↳ {note}\n')
-        else:
-            sys.stdout.write('\n')
+            l1 = f"search: {typed}_"
+            l2 = ""
+        sys.stdout.write(f'    ↳ {l1}\n' if l1 else '\n')
+        sys.stdout.write(f'      {l2}\n' if l2 else '\n')
         sys.stdout.flush()
 
     draw(first=True)
 
-    while True:
-        key = _read_key()
+    import termios as _termios
+    try:
+        _saved_term = _termios.tcgetattr(sys.stdin.fileno())
+    except Exception:
+        _saved_term = None
 
-        if key == 'UP':
-            sel = (sel - 1) % 3
-            typed = ""
-            draw()
-        elif key == 'DOWN':
-            sel = (sel + 1) % 3
-            typed = ""
-            draw()
-        elif key == 'ENTER':
-            print()
-            if sel in (0, 1):
-                return options[sel]
-            else:
-                # board pick — typed may already have content
-                if not typed:
-                    sys.stdout.write('  Board # or name: ')
-                    sys.stdout.flush()
-                    import termios as _t
-                    _t.tcsetattr(sys.stdin.fileno(), _t.TCSADRAIN,
-                                 _t.tcgetattr(sys.stdin.fileno()))
-                    typed = input('')
-                if typed.isdigit():
-                    board = service.show_board(limit=25)
-                    idx = int(typed) - 1
-                    return board[idx] if 0 <= idx < len(board) else None
-                else:
-                    return service._find_player(typed)
-        elif key == 'q':
-            return 'QUIT'
-        elif key == 'BACKSPACE':
-            if typed:
-                typed = typed[:-1]
+    def _restore():
+        if _saved_term is not None:
+            try:
+                _termios.tcsetattr(sys.stdin.fileno(), _termios.TCSADRAIN, _saved_term)
+            except Exception:
+                pass
+
+    try:
+        while True:
+            key = _read_key()
+
+            if key == 'UP':
+                sel = (sel - 1) % 3
+                typed = ""
                 draw()
-        elif key.isprintable():
-            # Any printable char auto-switches to board option and accumulates
-            sel = 2
-            typed += key
-            draw()
+            elif key == 'DOWN':
+                sel = (sel + 1) % 3
+                typed = ""
+                draw()
+            elif key == 'ENTER':
+                print()
+                if sel in (0, 1):
+                    return options[sel]
+                else:
+                    # board pick — typed may already have content
+                    if not typed:
+                        sys.stdout.write('  Board # or name: ')
+                        sys.stdout.flush()
+                        _restore()
+                        typed = input('')
+                    if typed.isdigit():
+                        board = service.show_board(limit=25)
+                        idx = int(typed) - 1
+                        return board[idx] if 0 <= idx < len(board) else None
+                    else:
+                        return service._find_player(typed)
+            elif key == 'q':
+                return 'QUIT'
+            elif key == 'BACKSPACE':
+                if typed:
+                    typed = typed[:-1]
+                    draw()
+            elif key.isprintable():
+                # Any printable char auto-switches to board option and accumulates
+                sel = 2
+                typed += key
+                draw()
+    except Exception:
+        _restore()
+        raise
 
 
 def print_roster(players):
